@@ -1,0 +1,24 @@
+{
+  "name": "vamude-kit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Wspólne elementy aplikacji Vamude: /healthz, wersja w stopce, statystyki odwiedzin.",
+  "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "start": "node example/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "author": "Karol Konop",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "isbot": "^5.2.3"
+  },
+  "devDependencies": {
+    "express": "^5.3.0"
+  }
+}
