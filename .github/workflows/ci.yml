@@ -1,0 +1,111 @@
+# Wspólny workflow testów dla stron Vamude (Node). Check nazywa się "test" - tę nazwę wpisujesz w rulesetach.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [staging, main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build (jeśli repo go ma)
+        run: npm run build --if-present
+      - name: Testy (jeśli repo je ma)
+        env:
+          # Zmienna repo (Settings → Secrets and variables → Actions → Variables), np. gdy testy wymagają prawdziwej bazy.
+          CI_SKIP_TESTS: ${{ vars.CI_SKIP_TESTS }}
+        run: |
+          if [ "$CI_SKIP_TESTS" = "true" ]; then
+            echo "::warning::Testy pominięte (zmienna repo CI_SKIP_TESTS=true) - zostaje test uruchomienia."
+          elif node -e "const t=(require('./package.json').scripts||{}).test||''; process.exit(t && !t.includes('no test specified') ? 0 : 1)"; then
+            npm test
+          else
+            echo "Repo nie ma testów - zostaje test uruchomienia poniżej."
+          fi
+      - name: Test uruchomienia (strona główna odpowiada 200)
+        env:
+          PORT: "3999"
+        run: |
+          [ -f .env ] || { [ -f .env.example ] && cp .env.example .env || touch .env; }
+          npm start > app.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fs -o /dev/null http://127.0.0.1:3999/; then echo "OK: aplikacja odpowiada"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::Aplikacja nie odpowiedziała na http://127.0.0.1:3999/"
+          cat app.log
+          exit 1
+
+  # Wdrożenie na podgląd <nazwa>.staging.vamude.com po zielonym teście na gałęzi staging.
+  # Działa tylko w repo ze zmienną STAGING_PREVIEW=true i environment "staging" (sekrety TS_AUTHKEY, DEPLOY_SSH_KEY).
+  deploy-staging:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging' && vars.STAGING_PREVIEW == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    steps:
+      - name: Tailscale (tag:ci-staging, węzeł tymczasowy)
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          statedir: /tmp/tailscale-state/
+      - name: Wdrożenie na podgląd
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          REPO: ${{ github.event.repository.name }}
+          SHA: ${{ github.sha }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          # Serwer przyjmuje tylko "<repo> <sha>"; wymuszone polecenie sprawdza, czy commit jest w staging.
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploy@$DEPLOY_HOST" "$REPO $SHA"
+
+  # Wdrożenie na produkcję (WEBSITES) po zielonym teście na main, czyli po scaleniu PR wydania, który zatwierdzasz.
+  # Działa tylko w repo ze zmienną PRODUCTION_DEPLOY=true i environment "production" (sekrety dostępne tylko dla main).
+  # Serwer sprawdza, że commit należy do main, i sam przywraca poprzednią wersję, jeśli nowa nie odpowiada.
+  deploy-production:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.PRODUCTION_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    concurrency:
+      group: deploy-production-${{ github.event.repository.name }}
+      cancel-in-progress: false
+    steps:
+      - name: Tailscale (tag:ci-prod, węzeł tymczasowy)
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          statedir: /tmp/tailscale-state/
+      - name: Wdrożenie na produkcję
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          REPO: ${{ github.event.repository.name }}
+          SHA: ${{ github.sha }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploy@$DEPLOY_HOST" "$REPO $SHA"
