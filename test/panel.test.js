@@ -40,6 +40,7 @@ test('logowanie hasłem, ciasteczko, panel i JSON', async (t) => {
   const panel = await a.get('/stats', { ...BROWSER, cookie });
   assert.equal(panel.status, 200);
   assert.equal(panel.headers.get('x-robots-tag'), 'noindex');
+  assert.match(panel.headers.get('content-security-policy'), /style-src 'unsafe-inline'/);
   const html = await panel.text();
   assert.match(html, /Unikalne osoby/);
   assert.match(html, /Powracające osoby/);
@@ -81,4 +82,21 @@ test('okresy: domyślnie 30 dni, własny zakres, błędny zakres ignorowany', as
   assert.deepEqual(await range('?okres=rok'), ['2026-01-01', '2026-11-16']);
   assert.deepEqual(await range('?from=2026-11-01&to=2026-11-05'), ['2026-11-01', '2026-11-05']);
   assert.deepEqual(await range('?from=2026-11-05&to=2026-11-01'), ['2026-10-18', '2026-11-16']);
+});
+
+test('panel nadpisuje restrykcyjne CSP aplikacji (helmet przed panelem)', async (t) => {
+  const express = require('express');
+  const Database = require('better-sqlite3');
+  const { createStats } = require('..');
+  const app = express();
+  app.use((req, res, next) => { res.set('Content-Security-Policy', "default-src 'self'"); next(); });
+  app.use(createStats({ db: new Database(':memory:') }).panel);
+  app.get('/', (req, res) => res.send('<p>start</p>'));
+  const server = await new Promise((r) => { const s = app.listen(0, '127.0.0.1', () => r(s)); });
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const panel = await fetch(`${base}/stats`, { headers: { authorization: `Bearer ${PASS}` } });
+  assert.match(panel.headers.get('content-security-policy'), /^default-src 'none'; style-src 'unsafe-inline'/);
+  // Reszta aplikacji zachowuje swoją politykę.
+  assert.equal((await fetch(`${base}/`)).headers.get('content-security-policy'), "default-src 'self'");
 });
