@@ -16,6 +16,15 @@ npm install https://github.com/pogan/vamude-kit/archive/refs/tags/v1.0.0.tar.gz
 
 Aktualizacja = ta sama komenda z nowym numerem wydania, w PR do `staging`.
 
+Pakiet zależy od `better-sqlite3` (moduł natywny). npm 11.19+ (m.in. na WEBSITES) domyślnie blokuje skrypty
+instalacyjne zależności, więc aplikacja musi je zatwierdzić w swoim `package.json`, inaczej nie wystartuje
+(`Could not locate the bindings file`):
+
+```bash
+npx npm@latest install-scripts approve better-sqlite3 --no-allow-scripts-pin
+# → "allowScripts": { "better-sqlite3": true }
+```
+
 ## Użycie (Express)
 
 ```js
