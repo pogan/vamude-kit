@@ -12,6 +12,11 @@ async function startApp(statsOptions = {}, setup = () => {}) {
   const app = express();
   app.set('trust proxy', true);
   const stats = createStats({ db: new Database(':memory:'), now: () => clock.now, ...statsOptions });
+  // Zalogowany administrator w testach: nagłówek x-admin (w aplikacji robi to createAdmin).
+  app.use((req, res, next) => {
+    if (req.get('x-admin') === '1') res.locals.isAdmin = true;
+    next();
+  });
   app.use(stats.middleware);
   app.use(stats.panel);
   setup(app);
