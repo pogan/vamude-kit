@@ -1,8 +1,8 @@
 {
   "name": "vamude-kit",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Wspólne elementy aplikacji Vamude: /healthz, wersja w stopce, statystyki odwiedzin.",
+  "description": "Wspólne elementy aplikacji Vamude: /healthz, wersja w stopce, statystyki odwiedzin, panel /kierownik z logowaniem Google.",
   "main": "index.js",
   "type": "commonjs",
   "engines": {
