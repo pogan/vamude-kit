@@ -84,3 +84,23 @@ test('panel nadpisuje restrykcyjne CSP aplikacji (helmet przed panelem)', async 
   assert.match(panel.headers.get('content-security-policy'), /^default-src 'none'; style-src 'unsafe-inline'/);
   assert.equal((await fetch(`${base}/`)).headers.get('content-security-policy'), "default-src 'self'");
 });
+
+test('sekcje aplikacji dla wybranego okresu; błąd sekcji nie psuje panelu', async (t) => {
+  const seen = [];
+  const a = await startApp({
+    sections: ({ from, to }) => {
+      seen.push([from, to]);
+      return `<h2>Lejek</h2><p>${from}…${to}</p>`;
+    },
+  });
+  t.after(a.close);
+  const html = await (await a.get('/kierownik/stats?from=2026-11-01&to=2026-11-05', ADMIN)).text();
+  assert.match(html, /<h2>Lejek<\/h2><p>2026-11-01…2026-11-05<\/p>/);
+  assert.deepEqual(seen, [['2026-11-01', '2026-11-05']]);
+
+  const b = await startApp({ sections: () => { throw new Error('baza'); } });
+  t.after(b.close);
+  const res = await b.get('/kierownik/stats', ADMIN);
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /Nie udało się policzyć/);
+});

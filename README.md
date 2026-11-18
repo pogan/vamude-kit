@@ -13,7 +13,7 @@ Wspólne elementy aplikacji Vamude (standard: `~/vamude/infra/STACK.md`):
 Zależność z archiwum wydania (bez gita na serwerze, z sumą kontrolną w `package-lock.json`):
 
 ```bash
-npm install https://github.com/pogan/vamude-kit/archive/refs/tags/v2.0.0.tar.gz
+npm install https://github.com/pogan/vamude-kit/archive/refs/tags/v2.1.0.tar.gz
 ```
 
 Aktualizacja = ta sama komenda z nowym numerem wydania, w PR do `staging`.
@@ -76,6 +76,7 @@ nie zdążył w `timeoutMs` (2 s). `Cache-Control: no-store`.
 | `panelPath` | `/kierownik/stats` | adres panelu (`<panelPath>.json` dla danych) |
 | `loginPath` | `/kierownik` | dokąd panel odsyła niezalogowanych |
 | `guard(req, res)` | `res.locals.isAdmin` | własny warunek dostępu do panelu |
+| `sections({ req, from, to })` | — | HTML własnych sekcji pod kafelkami, dla okresu wybranego w panelu (np. lejek sprzedaży); dane z zewnątrz przez `escapeHtml` z pakietu |
 | `timeZone` | `Europe/Warsaw` | strefa, w której liczone są dni |
 
 Liczone są żądania `GET` zakończone odpowiedzią HTML 200 (bez zasobów, przekierowań, 404 i prefetchu).
