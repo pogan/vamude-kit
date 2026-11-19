@@ -26,13 +26,14 @@ test('boty zapisuje z flagą, poza liczbami ludzi', async (t) => {
   await a.get('/', as('1.1.1.2', { 'user-agent': 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)' }));
   await a.get('/', { 'user-agent': CHROME_WIN, 'x-forwarded-for': '1.1.1.3' }); // brak Accept-Language
   await a.get('/', { 'x-forwarded-for': '1.1.1.4' }); // fetch wysyła wtedy własny User-Agent "node"
+  await a.get('/', as('1.1.1.6', { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1' }));
   await a.get('/', as('1.1.1.5'));
   await a.settle();
-  assert.deepEqual(a.rows().map((r) => r.is_bot), [1, 1, 1, 1, 0]);
+  assert.deepEqual(a.rows().map((r) => r.is_bot), [1, 1, 1, 1, 1, 0]);
   const s = a.stats.summary({ from: '2026-11-16', to: '2026-11-16' });
   assert.equal(s.pageviews, 1);
   assert.equal(s.visitors, 1);
-  assert.equal(s.botPageviews, 4);
+  assert.equal(s.botPageviews, 5);
 });
 
 test('exclude aplikacji (np. admin) sprawdzany po obsłużeniu żądania', async (t) => {

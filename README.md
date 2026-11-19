@@ -41,7 +41,8 @@ app.locals.appVersion = version;        // w stopce: <%= appVersion.label %>
 const stats = createStats({ db });      // baza aplikacji; bez niej: data/stats.sqlite
 const admin = createAdmin({ stats });   // /kierownik, klucz sesji w tej samej bazie
 app.use(admin.middleware);              // res.locals.isAdmin / res.locals.admin
-app.use(stats.middleware);              // wcześnie, przed trasami stron
+app.use(stats.middleware);              // wcześnie, przed trasami stron; obsługuje też /_vk.js i /_vk
+// W szablonie strony przed </body>: <%- vkScript %>  (pomiar ekranu, od 2.2.0)
 app.use(stats.panel);                   // /kierownik/stats i /kierownik/stats.json
 app.use(admin.router);                  // /kierownik, /kierownik/login, /kierownik/wyloguj
 app.get('/kierownik/zamowienia', admin.requireAdmin, ...); // własne strony panelu
@@ -78,9 +79,23 @@ nie zdążył w `timeoutMs` (2 s). `Cache-Control: no-store`.
 | `guard(req, res)` | `res.locals.isAdmin` | własny warunek dostępu do panelu |
 | `sections({ req, from, to })` | — | HTML własnych sekcji pod kafelkami, dla okresu wybranego w panelu (np. lejek sprzedaży); dane z zewnątrz przez `escapeHtml` z pakietu |
 | `timeZone` | `Europe/Warsaw` | strefa, w której liczone są dni |
+| `beaconPath` | `/_vk` | pomiar ekranu: skrypt `<beaconPath>.js`, dane `POST <beaconPath>`; `false` wyłącza |
 
 Liczone są żądania `GET` zakończone odpowiedzią HTML 200 (bez zasobów, przekierowań, 404 i prefetchu).
-Boty (`isbot`, brak `User-Agent`, brak języka w `Accept-Language`) zapisywane z flagą, poza liczbami ludzi.
+Boty (`isbot`, brak `User-Agent`, brak języka w `Accept-Language`, przeglądarka sprzed lat: iOS ≤ 13, Chrome < 100) zapisywane z flagą, poza liczbami ludzi.
+
+Ekran i okno (od 2.2.0): serwer ich nie widzi, więc strona dołącza własny skrypt `<script src="/_vk.js" defer>`
+(w szablonie `<%- vkScript %>`, w statycznym HTML wpisany ręcznie; `stats.scriptTag` to ten sam znacznik).
+Skrypt wysyła raz `navigator.sendBeacon` z rozmiarem ekranu, okna, gęstością pikseli i informacją o ekranie
+dotykowym. Serwer dopisuje to do odsłony tej samej osoby i ścieżki z ostatnich 5 minut, której jeszcze nie
+zmierzono; bez takiej odsłony nic nie zapisuje. Bez ciasteczek, ekran nie wchodzi do identyfikatora osoby.
+Zgodne z CSP `script-src 'self'` i `connect-src 'self'` (domyślne w helmet). iPad z Safari (UA Maca) z ekranem
+dotykowym zapisywany jako tablet z iOS. Przeglądarki w aplikacjach (Facebook, Instagram, TikTok, LinkedIn,
+Google) to osobne pozycje, a nie Safari czy Chrome.
+
+Panel: kafelek „Odsłony z pomiarem ekranu”, tabela „Na czym oglądają stronę” (urządzenie · system ·
+przeglądarka · szerokość okna) oraz urządzenia, systemy, przeglądarki, szerokość okna i ekrany z udziałem
+w osobach. JSON: `systems`, `viewports`, `screens`, `combos`, `measuredPageviews`.
 
 Odwiedzający = `HMAC-SHA256(sekret, IP + rodzina przeglądarki + system)`, sekret losowy i stały w `vk_meta`.
 Wizyta kończy się po 30 min przerwy. Dane nie są kasowane automatycznie (przegląd RODO: ręcznie, osobna procedura).
