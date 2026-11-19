@@ -24,7 +24,8 @@ app.get('/healthz', healthz({ version, checks: { db: () => stats.db.prepare('SEL
 app.get('/', (req, res) => {
   res.type('html').send(`<!doctype html><title>vamude-kit</title>
 <p>Serwer przykładowy vamude-kit. <a href="/healthz">/healthz</a> · <a href="/kierownik">/kierownik</a></p>
-<footer><small>${version.label}</small></footer>`);
+<footer><small>${version.label}</small></footer>
+${res.locals.vkScript}`);
 });
 
 app.listen(PORT, HOST, () => {
