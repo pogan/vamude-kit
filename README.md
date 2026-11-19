@@ -82,7 +82,7 @@ nie zdążył w `timeoutMs` (2 s). `Cache-Control: no-store`.
 | `beaconPath` | `/_vk` | pomiar ekranu: skrypt `<beaconPath>.js`, dane `POST <beaconPath>`; `false` wyłącza |
 
 Liczone są żądania `GET` zakończone odpowiedzią HTML 200 (bez zasobów, przekierowań, 404 i prefetchu).
-Boty (`isbot`, brak `User-Agent`, brak języka w `Accept-Language`) zapisywane z flagą, poza liczbami ludzi.
+Boty (`isbot`, brak `User-Agent`, brak języka w `Accept-Language`, przeglądarka sprzed lat: iOS ≤ 13, Chrome < 100) zapisywane z flagą, poza liczbami ludzi.
 
 Ekran i okno (od 2.2.0): serwer ich nie widzi, więc strona dołącza własny skrypt `<script src="/_vk.js" defer>`
 (w szablonie `<%- vkScript %>`, w statycznym HTML wpisany ręcznie; `stats.scriptTag` to ten sam znacznik).

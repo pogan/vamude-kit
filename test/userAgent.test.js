@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { parseUserAgent } = require('../lib/userAgent');
+const { parseUserAgent, isOutdated } = require('../lib/userAgent');
 
 const cases = [
   ['Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'Chrome', 'Windows', 'komputer'],
@@ -25,4 +25,15 @@ test('rodzina przeglądarki, system i urządzenie bez wersji', () => {
   for (const [ua, browser, os, device] of cases) {
     assert.deepEqual(parseUserAgent(ua), { browser, os, device }, ua);
   }
+});
+
+test('przestarzałe przeglądarki (scrapery) rozpoznawane, aktualne nie', () => {
+  const old = [
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+  ];
+  for (const ua of old) assert.equal(isOutdated(ua), true, ua);
+  for (const [ua] of cases) assert.equal(isOutdated(ua), false, ua);
+  assert.equal(isOutdated('Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1'), false);
+  assert.equal(isOutdated('Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'), false);
 });
